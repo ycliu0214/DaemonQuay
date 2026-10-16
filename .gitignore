@@ -1,0 +1,34 @@
+# Build artifacts
+build/
+*.app/
+*.dSYM/
+DerivedData/
+# Local caches
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+# Local/private data (never commit actual user configuration)
+.local/
+DaemonQuayData/
+*.log
+*.pem
+*.key
+.env
+.env.*
+# Editor noise
+.vscode/
+.idea/
+
+# Release archives and Apple signing materials
+*.dmg
+*.p12
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.p8
+.DS_Store
+
+# Historical development test reports
+TESTING_v0.*.md
+Docs/TESTING_v0.*.md

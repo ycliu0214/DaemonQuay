@@ -1,0 +1,26 @@
+{
+  "apiVersion": 1,
+  "launchLabel": "dev.daemonquay.caddy",
+  "start": [
+    "${executable}",
+    "run",
+    "--config",
+    "${caddyfile}"
+  ],
+  "preflight": [
+    "${executable}",
+    "validate",
+    "--config",
+    "${caddyfile}"
+  ],
+  "stopStrategy": "commandThenSignal",
+  "stopCommand": [
+    "${executable}",
+    "stop"
+  ],
+  "portKey": "port",
+  "timeoutKey": "shutdownTimeout",
+  "requiredFiles": [
+    "${caddyfile}"
+  ]
+}

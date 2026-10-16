@@ -1,0 +1,22 @@
+{
+  "omlx": {
+    "executable": "/opt/homebrew/bin/omlx",
+    "host": "127.0.0.1",
+    "port": 8000,
+    "modelDirectory": "~/.omlx/models",
+    "ssdCacheDirectory": "~/.omlx/cache",
+    "ssdCacheMaxSize": "20GB",
+    "shutdownTimeout": 60
+  },
+  "caddy": {
+    "executable": "/opt/homebrew/bin/caddy",
+    "caddyfile": "~/.config/caddy/Caddyfile",
+    "port": 8080,
+    "shutdownTimeout": 30
+  },
+  "_daemonquay": {
+    "onboardingCompleted": false,
+    "language": "en",
+    "showStartupHint": true
+  }
+}

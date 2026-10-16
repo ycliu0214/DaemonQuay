@@ -1,0 +1,46 @@
+{
+  "apiVersion": 1,
+  "id": "caddy",
+  "executable": "module-control",
+  "name": "Caddy",
+  "symbol": "network",
+  "stopOrder": 10,
+  "startTimeoutSeconds": 30,
+  "stopTimeoutSeconds": 70,
+  "statusTimeoutSeconds": 5,
+  "settings": [
+    {
+      "key": "executable",
+      "type": "string",
+      "labels": {
+        "zh-Hant": "執行檔路徑",
+        "en": "Executable"
+      }
+    },
+    {
+      "key": "caddyfile",
+      "type": "string",
+      "labels": {
+        "zh-Hant": "Caddyfile 路徑",
+        "en": "Caddyfile path"
+      }
+    },
+    {
+      "key": "port",
+      "type": "integer",
+      "labels": {
+        "zh-Hant": "狀態檢查連接埠",
+        "en": "Port used for conflict detection"
+      }
+    },
+    {
+      "key": "shutdownTimeout",
+      "type": "integer",
+      "labels": {
+        "zh-Hant": "正常停止等待（秒）",
+        "en": "Graceful stop timeout (seconds)"
+      }
+    }
+  ],
+  "supportsValidate": true
+}

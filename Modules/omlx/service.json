@@ -1,0 +1,31 @@
+{
+  "apiVersion": 1,
+  "launchLabel": "dev.daemonquay.omlx",
+  "start": [
+    "${executable}",
+    "serve",
+    "--model-dir",
+    "${modelDirectory}",
+    "--host",
+    "${host}",
+    "--port",
+    "${port}"
+  ],
+  "stopStrategy": "signal",
+  "portKey": "port",
+  "timeoutKey": "shutdownTimeout",
+  "requiredDirectories": [
+    "${modelDirectory}"
+  ],
+  "optionalStartArguments": [
+    {
+      "whenNonEmpty": "ssdCacheDirectory",
+      "arguments": [
+        "--paged-ssd-cache-dir",
+        "${ssdCacheDirectory}",
+        "--paged-ssd-cache-max-size",
+        "${ssdCacheMaxSize}"
+      ]
+    }
+  ]
+}

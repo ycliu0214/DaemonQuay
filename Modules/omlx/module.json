@@ -1,0 +1,70 @@
+{
+  "apiVersion": 1,
+  "id": "omlx",
+  "executable": "module-control",
+  "name": "oMLX",
+  "symbol": "cpu",
+  "stopOrder": 20,
+  "startTimeoutSeconds": 20,
+  "stopTimeoutSeconds": 75,
+  "statusTimeoutSeconds": 5,
+  "settings": [
+    {
+      "key": "executable",
+      "type": "string",
+      "labels": {
+        "zh-Hant": "執行檔路徑",
+        "en": "Executable"
+      }
+    },
+    {
+      "key": "host",
+      "type": "string",
+      "labels": {
+        "zh-Hant": "監聽位址",
+        "en": "Host"
+      }
+    },
+    {
+      "key": "port",
+      "type": "integer",
+      "labels": {
+        "zh-Hant": "連接埠",
+        "en": "Port"
+      }
+    },
+    {
+      "key": "modelDirectory",
+      "type": "string",
+      "labels": {
+        "zh-Hant": "模型資料夾",
+        "en": "Model directory"
+      }
+    },
+    {
+      "key": "ssdCacheDirectory",
+      "type": "string",
+      "labels": {
+        "zh-Hant": "SSD 快取資料夾",
+        "en": "SSD cache directory"
+      }
+    },
+    {
+      "key": "ssdCacheMaxSize",
+      "type": "string",
+      "labels": {
+        "zh-Hant": "SSD 快取上限",
+        "en": "SSD cache max size"
+      }
+    },
+    {
+      "key": "shutdownTimeout",
+      "type": "integer",
+      "labels": {
+        "zh-Hant": "正常停止等待（秒）",
+        "en": "Graceful stop timeout (seconds)"
+      }
+    }
+  ],
+  "supportsValidate": true
+}

@@ -64,13 +64,47 @@ enum PluginRegistry {
                           fields.allSatisfy({ $0.key.range(of: "^[A-Za-z][A-Za-z0-9]*$", options: .regularExpression) != nil && ["string", "integer"].contains($0.type) }) else {
                         throw PluginError.invalid("Invalid settings schema")
                     }
+                    let infoTimeout = manifest.infoTimeoutSeconds ?? 5
+                    guard (1...15).contains(infoTimeout) else {
+                        throw PluginError.invalid("Invalid info timeout (1–15 seconds)")
+                    }
+                    if manifest.supportsInfo != true,
+                       manifest.ui?.sections.contains(where: { section in section.items.contains(where: { $0.type == "info" }) }) == true {
+                        throw PluginError.invalid("An info item requires supportsInfo: true")
+                    }
+                    if let ui = manifest.ui {
+                        guard ui.sections.count <= 20,
+                              Set(ui.sections.map(\.id)).count == ui.sections.count else {
+                            throw PluginError.invalid("Duplicate or excessive UI sections")
+                        }
+                        let keys = Set(fields.map(\.key))
+                        for section in ui.sections {
+                            guard section.id.range(of: "^[A-Za-z][A-Za-z0-9-]{0,39}$", options: .regularExpression) != nil,
+                                  section.items.count <= 50,
+                                  !section.title.isEmpty,
+                                  section.title.values.allSatisfy({ !$0.isEmpty && $0.count <= 200 }) else {
+                                throw PluginError.invalid("Invalid UI section")
+                            }
+                            for item in section.items {
+                                let valid: Bool
+                                switch item.type {
+                                case "text": valid = item.key == nil && item.label == nil && item.text?.values.contains(where: { !$0.isEmpty && $0.count <= 2000 }) == true
+                                case "info": valid = item.text == nil && item.key?.range(of: "^[A-Za-z][A-Za-z0-9]*$", options: .regularExpression) != nil && item.label?.isEmpty == false
+                                case "setting": valid = item.text == nil && item.label == nil && item.key.map { keys.contains($0) } == true
+                                default: valid = false
+                                }
+                                guard valid else { throw PluginError.invalid("Invalid UI item in section \(section.id)") }
+                            }
+                        }
+                    }
                     used.insert(manifest.id)
                     found.append(PluginDescriptor(id: manifest.id, name: manifest.name,
                         executable: executable, directory: base,
                         symbol: ModuleSymbol.resolved(manifest.symbol ?? ModuleSymbol.fallback),
                         stopOrder: manifest.stopOrder ?? 50,
                         startTimeout: start, stopTimeout: stop, statusTimeout: status,
-                        settings: fields, supportsValidate: manifest.supportsValidate ?? false))
+                        settings: fields, supportsValidate: manifest.supportsValidate ?? false,
+                        supportsInfo: manifest.supportsInfo ?? false, infoTimeout: infoTimeout, ui: manifest.ui))
                 } catch {
                     issues.append(PluginIssue(id: folder, reason: error.localizedDescription))
                 }

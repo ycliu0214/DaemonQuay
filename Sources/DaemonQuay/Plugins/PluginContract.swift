@@ -11,6 +11,29 @@ struct PluginSettingField: Codable, Hashable, Identifiable {
     }
 }
 
+// Optional, declarative presentation. Only known types are accepted by the registry.
+// Modules never provide executable UI code.
+struct PluginUIItem: Codable, Hashable {
+    let type: String // text | info | setting
+    let key: String?
+    let label: [String: String]?
+    let text: [String: String]?
+}
+
+struct PluginUISection: Codable, Hashable, Identifiable {
+    let id: String
+    let title: [String: String]
+    let items: [PluginUIItem]
+}
+
+struct PluginUI: Codable, Hashable {
+    let sections: [PluginUISection]
+}
+
+struct PluginInfoResponse: Decodable {
+    let values: [String: String]
+}
+
 struct PluginManifest: Codable {
     let apiVersion: Int
     let id: String
@@ -23,6 +46,9 @@ struct PluginManifest: Codable {
     let statusTimeoutSeconds: Int?
     let settings: [PluginSettingField]?
     let supportsValidate: Bool?
+    let supportsInfo: Bool?
+    let infoTimeoutSeconds: Int?
+    let ui: PluginUI?
 }
 
 struct PluginDescriptor: Identifiable, Hashable {
@@ -37,6 +63,9 @@ struct PluginDescriptor: Identifiable, Hashable {
     let statusTimeout: Int
     let settings: [PluginSettingField]
     let supportsValidate: Bool
+    let supportsInfo: Bool
+    let infoTimeout: Int
+    let ui: PluginUI?
 }
 
 /// One JSON response on stdout. A module may be a compiled program or an executable script.

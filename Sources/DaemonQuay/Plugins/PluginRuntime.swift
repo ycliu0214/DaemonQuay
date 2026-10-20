@@ -64,6 +64,67 @@ enum PluginRuntime {
         }
     }
 
+    /// Optional, read-only module metadata. Invoke only off the main thread.
+    /// This result never changes lifecycle state and is never persisted.
+    static func info(_ plugin: PluginDescriptor) -> Result<[String: String], PluginError> {
+        guard plugin.supportsInfo else {
+            return .failure(.invalid("Module does not support info"))
+        }
+        let fm = FileManager.default
+        let out = fm.temporaryDirectory.appendingPathComponent("dq-info-out-\(UUID().uuidString)")
+        let err = fm.temporaryDirectory.appendingPathComponent("dq-info-err-\(UUID().uuidString)")
+        guard fm.createFile(atPath: out.path, contents: nil),
+              fm.createFile(atPath: err.path, contents: nil),
+              let output = FileHandle(forWritingAtPath: out.path),
+              let error = FileHandle(forWritingAtPath: err.path) else {
+            return .failure(.invalid("Could not allocate info response files"))
+        }
+        defer {
+            try? output.close()
+            try? error.close()
+            try? fm.removeItem(at: out)
+            try? fm.removeItem(at: err)
+        }
+        let task = Process()
+        task.executableURL = plugin.executable
+        task.arguments = ["info"]
+        task.currentDirectoryURL = plugin.directory
+        var environment = ProcessInfo.processInfo.environment
+        environment["DAEMONQUAY_MODULE_ID"] = plugin.id
+        environment["DAEMONQUAY_MODULE_DIR"] = plugin.directory.path
+        environment["DAEMONQUAY_DATA_DIR"] = Paths.base.path
+        task.environment = environment
+        task.standardOutput = output
+        task.standardError = error
+        let done = DispatchSemaphore(value: 0)
+        task.terminationHandler = { _ in done.signal() }
+        do {
+            try task.run()
+        } catch {
+            return .failure(.invalid("Cannot run info command: \(error.localizedDescription)"))
+        }
+        if done.wait(timeout: .now() + .seconds(plugin.infoTimeout)) == .timedOut {
+            if task.isRunning { task.terminate() }
+            // A control process that ignores termination may survive; never block the GUI indefinitely.
+            _ = done.wait(timeout: .now() + .seconds(2))
+            return .failure(.invalid("Info command timed out"))
+        }
+        guard task.terminationStatus == 0 else {
+            return .failure(.invalid("Info command failed (exit \(task.terminationStatus))"))
+        }
+        try? output.synchronize()
+        guard let data = try? Data(contentsOf: out), data.count <= 65_536,
+              let payload = try? JSONDecoder().decode(PluginInfoResponse.self, from: data),
+              payload.values.count <= 100,
+              payload.values.allSatisfy({ key, value in
+                  key.range(of: "^[A-Za-z][A-Za-z0-9]*$", options: .regularExpression) != nil &&
+                  value.count <= 4096
+              }) else {
+            return .failure(.invalid("Invalid info response"))
+        }
+        return .success(payload.values)
+    }
+
     static func invoke(_ plugin: PluginDescriptor, action: String) -> CommandResult {
         switch action {
         case "status": return execute(plugin, action: action, timeout: plugin.statusTimeout)

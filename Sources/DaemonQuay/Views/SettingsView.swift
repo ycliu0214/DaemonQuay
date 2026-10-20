@@ -10,6 +10,10 @@ struct SettingsView: View {
     @State private var section = "general"
     @State private var draft: [String: String] = [:]
     @State private var saving = false
+    @State private var infoValues: [String: String] = [:]
+    @State private var infoLoading = false
+    @State private var infoError: String?
+    @State private var infoRequestID = UUID()
     @State private var showStartupHint = AppPreferences.showStartupHint()
 
     private var selectedModule: PluginDescriptor? {
@@ -47,8 +51,12 @@ struct SettingsView: View {
             loadDraft()
             showStartupHint = AppPreferences.showStartupHint()
             manager.refresh()
+            refreshModuleInfo()
         }
-        .onChange(of: section) { _, _ in loadDraft() }
+        .onChange(of: section) { _, _ in
+            loadDraft()
+            refreshModuleInfo()
+        }
         .alert(l10n.text("settings.failed"), isPresented: Binding(
             get: { manager.lastError != nil },
             set: { if !$0 { manager.lastError = nil } }
@@ -250,17 +258,35 @@ struct SettingsView: View {
             }
             Divider()
             ScrollView {
-                if module.settings.isEmpty {
-                    Text(l10n.text("settings.noFields")).foregroundStyle(.secondary)
-                } else {
-                    Form {
-                        ForEach(module.settings) { field in
-                            TextField(field.label(currentLocale), text: binding(field.key))
-                                .disabled(!editable)
-                                .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 18) {
+                    if let ui = module.ui {
+                        ForEach(ui.sections) { uiSection in
+                            moduleUISection(uiSection, module: module)
                         }
-                    }.formStyle(.grouped)
+                        // Settings not explicitly placed in the UI remain accessible.
+                        let referenced = Set(ui.sections.flatMap { section in
+                            section.items.filter { $0.type == "setting" }.compactMap(\.key)
+                        })
+                        let remaining = module.settings.filter { !referenced.contains($0.key) }
+                        if !remaining.isEmpty {
+                            settingsGroup(remaining)
+                        }
+                        if ui.sections.isEmpty && remaining.isEmpty {
+                            Text(l10n.text("settings.noFields")).foregroundStyle(.secondary)
+                        }
+                    } else if module.settings.isEmpty {
+                        Text(l10n.text("settings.noFields")).foregroundStyle(.secondary)
+                    } else {
+                        // Preserve the original grouped Form for legacy manifests.
+                        Form {
+                            ForEach(module.settings) { field in
+                                settingRow(field)
+                            }
+                        }
+                        .formStyle(.grouped)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             Text(l10n.text("settings.note"))
                 .font(.caption).foregroundStyle(.secondary)
@@ -284,6 +310,119 @@ struct SettingsView: View {
             }
         }
         .padding(24)
+    }
+
+    // Module-controlled presentation, rendered exclusively using native SwiftUI views.
+    // One parent ScrollView owns overflow; individual sections never scroll separately.
+    private func moduleUISection(_ uiSection: PluginUISection, module: PluginDescriptor) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(localized(uiSection.title, fallback: uiSection.id))
+                .font(.headline)
+            ForEach(uiSection.items.indices, id: \.self) { index in
+                let item = uiSection.items[index]
+                switch item.type {
+                case "text":
+                    Text(localized(item.text, fallback: ""))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                case "info":
+                    if let key = item.key {
+                        infoRow(title: localized(item.label, fallback: key), value: infoValues[key] ?? "—")
+                    }
+                case "setting":
+                    if let key = item.key, let field = module.settings.first(where: { $0.key == key }) {
+                        settingRow(field)
+                    }
+                default:
+                    EmptyView()
+                }
+            }
+            if uiSection.items.contains(where: { $0.type == "info" }) && module.supportsInfo {
+                HStack(spacing: 10) {
+                    if infoLoading {
+                        ProgressView().controlSize(.small)
+                        Text(currentLocale == "zh-Hant" ? "正在載入資訊…" : "Loading information…")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else if let infoError {
+                        Text(currentLocale == "zh-Hant" ? "資訊讀取失敗：\(infoError)" : "Information unavailable: \(infoError)")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    Spacer(minLength: 0)
+                    Button(currentLocale == "zh-Hant" ? "重新整理" : "Refresh") {
+                        refreshModuleInfo()
+                    }
+                    .disabled(infoLoading)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func infoRow(title: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(title)
+                .foregroundStyle(.secondary)
+                .frame(width: 145, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(value)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func settingRow(_ field: PluginSettingField) -> some View {
+        TextField(field.label(currentLocale), text: binding(field.key))
+            .disabled(!editable)
+            .textFieldStyle(.roundedBorder)
+    }
+
+    private func settingsGroup(_ fields: [PluginSettingField]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(fields) { field in
+                settingRow(field)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func localized(_ values: [String: String]?, fallback: String) -> String {
+        guard let values else { return fallback }
+        return values[currentLocale] ?? values["en"] ?? fallback
+    }
+
+    // Never execute a module controller on the main thread. Ignore obsolete responses
+    // after navigation or after a newer refresh request replaces an older one.
+    private func refreshModuleInfo() {
+        let requestID = UUID()
+        infoRequestID = requestID
+        infoValues = [:]
+        infoError = nil
+        infoLoading = false
+        guard let module = selectedModule, module.supportsInfo,
+              module.ui?.sections.contains(where: { section in
+                  section.items.contains(where: { $0.type == "info" })
+              }) == true else { return }
+        infoLoading = true
+        Task.detached {
+            let result = PluginRuntime.info(module)
+            await MainActor.run {
+                guard infoRequestID == requestID, section == module.id else { return }
+                infoLoading = false
+                switch result {
+                case .success(let values):
+                    infoValues = values
+                case .failure(let error):
+                    infoError = error.localizedDescription
+                }
+            }
+        }
     }
 
     private func loadDraft() {

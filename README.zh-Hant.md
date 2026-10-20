@@ -1,6 +1,6 @@
 # DaemonQuay
 
-**版本 1.0.0 · macOS 原生選單列服務管理工具**
+**版本 1.0.1 · macOS 原生選單列服務管理工具**
 
 [English](README.md) | [繁體中文](README.zh-Hant.md)
 

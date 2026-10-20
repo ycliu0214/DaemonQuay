@@ -1,11 +1,35 @@
-# DaemonQuay v1.0.0 release checklist
+# DaemonQuay v1.0.1 Release Checklist
 
-**Status:** Source package prepared. macOS build, GUI behavior, service control, Developer ID signing, and notarization **not verified** by this package preparation.
+**Status:** Source release preparation. Complete the checks below on the target Mac before publication. Developer ID signing and Apple notarization are not included in the current build process.
 
-1. Back up `~/.local/share/DaemonQuay/` before a live upgrade. Keep existing running services unchanged. Do not overwrite oMLX or Caddy configuration.
-2. On the target Mac, run `zsh Scripts/install.sh`, `zsh Scripts/build.sh`, and `zsh Tests/run_tests.sh`. Confirm app bundle version 1.0.0 and build 29 with `/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/DaemonQuay.app/Contents/Info.plist`.
-3. Test launch, sidebar hit-testing, general preferences, persisted language, startup hint toggle, one-time welcome prompt, menu status indicators/alignment, services start/status/graceful stop, log reload (last 10,000 lines), and quit/reopen. Test in both languages and appearances.
-4. Verify updating a prior installation retains `settings.json`, logs, service order, hidden modules, and agents. Do not kill/restart existing services during an update. Review embedded ModuleHost paths before moving a live installation.
-5. Build an optional drag-install disk image with `zsh Scripts/create_dmg.sh`; this script does not sign or notarize. The app and all nested executables must be correctly signed with a valid Developer ID Application identity and hardened runtime before Apple notarization; verify on a clean Mac. Do not publicly label an ad-hoc signed DMG as trusted/notarized.
-6. Inspect `git status`, `git diff --cached`, and a secrets search before first public push. Commit only source, generic example configuration, and docs; never commit local user data, API keys, `build/`, `.app`, signing certificates, or logs.
-7. Publish source release/tag only after source review; publish binaries only after macOS integration, Gatekeeper, and notarization checks.
+1. Back up `~/.local/share/DaemonQuay/` before upgrading. Preserve existing settings, logs, installed modules, and service configurations.
+
+2. Build and test on the target Mac:
+   ```zsh
+   zsh Scripts/build.sh
+   zsh Tests/run_tests.sh
+   ```
+   Confirm application version **1.0.1** and build **30**.
+
+3. Verify the main interface, menu bar status indicators, settings, language persistence, service controls, and log viewing in both English and Traditional Chinese.
+
+4. Verify the Service Logs selector displays multiple modules correctly without clipped or overlapping labels.
+
+5. Verify existing bundled **oMLX** and **Caddy** modules retain their start, stop, status, and configuration behavior.
+
+6. Verify the optional **Tailscale external module** can be installed independently, enabled through `enabled-modules.json`, and controlled through DaemonQuay without rebuilding the application. Test Start, Stop, Status, and Validate. Confirm that its VPN state matches the Tailscale application.
+
+7. Confirm modules under `ExternalModules/` are not automatically bundled into `DaemonQuay.app`. Review module documentation and executable permissions.
+
+8. Verify upgrading an existing installation preserves user settings, service order, hidden services, logs, and installed external modules.
+
+9. Review Git changes for credentials, personal paths, logs, generated files, and other unintended content before committing.
+
+10. Create the Git commit and annotated `v1.0.1` tag only after completing the applicable checks.
+
+11. An optional DMG can be created with `zsh Scripts/create_dmg.sh`. The current build uses ad-hoc signing and is not notarized. Public binary distribution requires Developer ID signing, hardened runtime, Apple notarization, and verification on a clean macOS installation.
+
+12. Publish the GitHub source release with accurate release notes. Clearly identify Tailscale as an optional external module.
+
+**Verification:** Record completed tests and any remaining limitations before publishing. Do not describe unperformed checks as passed.
+

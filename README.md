@@ -1,6 +1,6 @@
 # DaemonQuay
 
-**Version 1.0.0 · Native macOS menu bar service manager**
+**Version 1.0.1 · Native macOS menu bar service manager**
 
 [English](README.md) | [繁體中文](README.zh-Hant.md)
 

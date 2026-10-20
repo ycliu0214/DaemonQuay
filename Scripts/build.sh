@@ -53,8 +53,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIdentifier</key><string>local.daemonquay.manager</string>
 <key>CFBundleExecutable</key><string>DaemonQuay</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.0.0</string>
-<key>CFBundleVersion</key><string>29</string>
+<key>CFBundleShortVersionString</key><string>1.0.1</string>
+<key>CFBundleVersion</key><string>30</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>LSUIElement</key><true/>

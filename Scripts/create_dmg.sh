@@ -3,7 +3,7 @@ set -euo pipefail
 HERE="${0:A:h}"
 ROOT="${HERE:h}"
 APP="$ROOT/build/DaemonQuay.app"
-OUT="$ROOT/build/DaemonQuay-v1.0.0.dmg"
+OUT="$ROOT/build/DaemonQuay-v1.0.1.dmg"
 STAGING="$ROOT/build/dmg-staging"
 [[ -d "$APP/Contents/MacOS" ]] || { echo "Missing $APP; run zsh Scripts/build.sh first" >&2; exit 1; }
 [[ -e "$OUT" ]] && { echo "Refusing to overwrite existing $OUT. Move it aside first." >&2; exit 1; }

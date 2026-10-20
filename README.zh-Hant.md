@@ -79,6 +79,8 @@ DaemonQuay 選單列／設定／日誌
 
 每個模組由 `module.json` 與可執行控制程式組成，需支援 `start`、`stop`、`status`，並可選擇支援 `validate`；操作結果以 JSON 回傳。內建 oMLX、Caddy 共用 Swift 模組執行器。詳細格式、權限與範例請參閱[模組開發規範](Docs/MODULE_SPEC.zh-Hant.md)。
 
+額外的外部模組及其安裝說明可參閱 [`ExternalModules/`](ExternalModules/) 資料夾。這些模組**不會在編譯 DaemonQuay 時自動打包**，使用者可依需求查看各模組目錄中的 README，並自行選擇安裝。
+
 第三方模組會以目前登入使用者的權限執行，並未沙箱化，請僅啟用可信任的模組。
 
 ## 移除與注意事項

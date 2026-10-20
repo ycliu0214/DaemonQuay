@@ -22,7 +22,8 @@ struct LogsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 210)
+                .labelsHidden()
+                .fixedSize(horizontal: true, vertical: false)
                 .onChange(of: manager.selectedLogID) { _, id in manager.loadLog(id) }
             }
 

@@ -1,0 +1,235 @@
+#!/bin/zsh
+
+# DaemonQuay Tailscale Module Controller
+# Module API v1
+#
+# Controls VPN connectivity using the official macOS
+# Tailscale Standalone application's CLI integration.
+#
+# No administrator privileges or separate tailscaled
+# service management are required.
+
+emulate -L zsh
+setopt NO_UNSET
+
+export TAILSCALE_BE_CLI=1
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+readonly CLI="/usr/local/bin/tailscale"
+readonly PLUTIL="/usr/bin/plutil"
+readonly SLEEP="/bin/sleep"
+
+# Emit exactly one JSON object on stdout.
+# All messages are fixed strings without dynamic input.
+reply() {
+    local state="$1"
+    local message="$2"
+
+    printf '{"state":"%s","message":"%s"}\n' \
+        "$state" "$message"
+
+    exit 0
+}
+
+check_cli() {
+    if [[ ! -x "$CLI" ]]; then
+        reply error \
+            "Tailscale CLI Integration is not installed."
+    fi
+}
+
+# Read Tailscale's current VPN backend state.
+# Returns failure when status or JSON parsing fails.
+backend_state() {
+    local data state
+
+    data=$("$CLI" status --json 2>/dev/null) || return 1
+
+    state=$(printf '%s\n' "$data" |
+        "$PLUTIL" -extract BackendState raw -o - - \
+        2>/dev/null) || return 1
+
+    [[ -n "$state" ]] || return 1
+
+    printf '%s\n' "$state"
+}
+
+# Wait for a requested backend state.
+wait_for_state() {
+    local target="$1"
+    local current
+    local i
+
+    for ((i = 0; i < 12; i++)); do
+        current=$(backend_state) || current="Unavailable"
+
+        if [[ "$current" == "$target" ]]; then
+            return 0
+        fi
+
+        case "$current" in
+            NeedsLogin|NeedsMachineAuth|InUseOtherUser)
+                return 1
+                ;;
+        esac
+
+        "$SLEEP" 1
+    done
+
+    return 1
+}
+
+do_status() {
+    local current
+
+    check_cli
+
+    current=$(backend_state) || {
+        reply error \
+            "Cannot read Tailscale VPN status."
+    }
+
+    case "$current" in
+        Running)
+            reply running \
+                "Tailscale VPN is connected."
+            ;;
+        Stopped|NoState)
+            reply stopped \
+                "Tailscale VPN is disconnected."
+            ;;
+        Starting)
+            reply stopped \
+                "Tailscale VPN is starting."
+            ;;
+        NeedsLogin)
+            reply error \
+                "Sign in using the Tailscale app first."
+            ;;
+        NeedsMachineAuth)
+            reply error \
+                "Tailscale device approval is required."
+            ;;
+        InUseOtherUser)
+            reply external \
+                "Tailscale is controlled by another user."
+            ;;
+        *)
+            reply error \
+                "Tailscale reported an unrecognized VPN state."
+            ;;
+    esac
+}
+
+do_start() {
+    local current
+
+    check_cli
+
+    current=$(backend_state) || {
+        reply error \
+            "Tailscale VPN is unavailable."
+    }
+
+    case "$current" in
+        Running)
+            reply running \
+                "Tailscale VPN is already connected."
+            ;;
+        NeedsLogin)
+            reply error \
+                "Complete Tailscale sign-in first."
+            ;;
+        NeedsMachineAuth)
+            reply error \
+                "Approve this device in Tailscale first."
+            ;;
+        InUseOtherUser)
+            reply external \
+                "Tailscale is controlled by another user."
+            ;;
+    esac
+
+    "$CLI" up >/dev/null 2>&1 || {
+        reply error \
+            "Failed to enable Tailscale VPN."
+    }
+
+    if wait_for_state Running; then
+        reply running \
+            "Tailscale VPN connected."
+    fi
+
+    reply error \
+        "Tailscale VPN did not reach Running state."
+}
+
+do_stop() {
+    local current
+
+    check_cli
+
+    current=$(backend_state) || {
+        reply error \
+            "Tailscale VPN is unavailable."
+    }
+
+    case "$current" in
+        Stopped|NoState)
+            reply stopped \
+                "Tailscale VPN is already disconnected."
+            ;;
+        InUseOtherUser)
+            reply external \
+                "Tailscale is controlled by another user."
+            ;;
+        NeedsLogin|NeedsMachineAuth)
+            reply error \
+                "Tailscale requires authentication or approval."
+            ;;
+    esac
+
+    "$CLI" down >/dev/null 2>&1 || {
+        reply error \
+            "Failed to disable Tailscale VPN."
+    }
+
+    if wait_for_state Stopped; then
+        reply stopped \
+            "Tailscale VPN disconnected."
+    fi
+
+    reply error \
+        "Tailscale VPN did not reach Stopped state."
+}
+
+do_validate() {
+    check_cli
+
+    "$CLI" version >/dev/null 2>&1 || {
+        reply error \
+            "Tailscale CLI validation failed."
+    }
+
+    reply stopped \
+        "Tailscale CLI Integration is available."
+}
+
+case "${1:-}" in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    status)
+        do_status
+        ;;
+    validate)
+        do_validate
+        ;;
+    *)
+        reply error \
+            "Unsupported module command."
+        ;;
+esac

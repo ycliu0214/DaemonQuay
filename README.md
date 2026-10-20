@@ -79,6 +79,8 @@ DaemonQuay menu bar / Settings / Logs
 
 Each module provides a manifest (`module.json`) and a controller executable. Controllers implement `start`, `stop`, and `status`, with optional `validate`, and return a JSON status response. The bundled oMLX and Caddy modules use the same generic Swift module host. See the [module developer specification](Docs/MODULE_SPEC.md) for schema, security considerations, and examples.
 
+Additional external modules and their installation instructions are available in ExternalModules/. These modules are not bundled automatically when building DaemonQuay. Users can review the README in each module's directory and install only the modules they need.
+
 External modules execute with the current user's privileges and are not sandboxed. Enable only trusted modules.
 
 ## Removal and precautions
